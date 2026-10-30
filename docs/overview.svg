@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 400" width="960" height="400" role="img" aria-labelledby="t d">
+  <title id="t">chrome-cookie-proxy</title>
+  <desc id="d">A client on the same user account asks a local unix socket for a cookies.txt. The proxy checks the peer uid, copies Chrome's cookie database, decrypts with the Chrome Safe Storage key from the login keychain, filters by domain allowlist, and returns Netscape format.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#1e1b4b"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#94a3b8"/>
+    </marker>
+    <style>
+      text { font-family: -apple-system, "SF Pro Text", "PingFang SC", "Noto Sans CJK SC", "Helvetica Neue", sans-serif; fill: #e2e8f0; }
+      .mono { font-family: "SF Mono", Menlo, Consolas, monospace; }
+      .dim { fill: #94a3b8; }
+      .h { font-size: 13px; font-weight: 600; letter-spacing: .04em; fill: #94a3b8; text-transform: uppercase; }
+      .t { font-size: 16px; font-weight: 600; }
+      .s { font-size: 13px; }
+      .box { fill: #111c33; stroke: #334155; stroke-width: 1.2; }
+      .core { fill: #0b1226; stroke: #6366f1; stroke-width: 1.6; }
+      .step { fill: #172554; stroke: #3b4f9a; stroke-width: 1; }
+      .ok { fill: #34d399; }
+      .no { fill: #f87171; }
+    </style>
+  </defs>
+
+  <rect width="960" height="400" rx="18" fill="url(#bg)"/>
+  <text x="40" y="52" class="h">Chrome cookie, one door, one allowlist</text>
+
+  <!-- client -->
+  <rect class="box" x="40" y="96" width="170" height="168" rx="12"/>
+  <text x="60" y="128" class="t">Download job</text>
+  <text x="60" y="150" class="s dim">same macOS user</text>
+  <text x="60" y="190" class="s mono" style="font-size:12px">curl --unix-socket</text>
+  <text x="60" y="210" class="s mono" style="font-size:12px">.../proxy.sock</text>
+  <text x="60" y="230" class="s mono" style="font-size:12px">/v1/cookies/youtube</text>
+
+  <!-- socket link -->
+  <path d="M210 160 H300" stroke="#94a3b8" stroke-width="1.6" fill="none" marker-end="url(#arrow)"/>
+  <path d="M300 214 H210" stroke="#94a3b8" stroke-width="1.6" fill="none" marker-end="url(#arrow)" stroke-dasharray="4 4"/>
+  <text x="224" y="150" class="s dim">GET</text>
+  <text x="216" y="236" class="s dim">cookies.txt</text>
+  <text x="40" y="294" class="s ok">socket 0600, dir 0700</text>
+  <text x="40" y="314" class="s ok">peer uid must match</text>
+  <text x="40" y="334" class="s ok">GET only, 8 KB, 5 s</text>
+
+  <!-- proxy -->
+  <rect class="core" x="300" y="76" width="360" height="288" rx="14"/>
+  <text x="322" y="108" class="t">chrome-cookie-proxy</text>
+  <text x="322" y="128" class="s dim">FDA + keychain grant live only here</text>
+
+  <rect class="step" x="322" y="146" width="316" height="38" rx="8"/>
+  <text x="338" y="170" class="s">1  copy Cookies (+wal) to a 0700 temp dir</text>
+  <rect class="step" x="322" y="192" width="316" height="38" rx="8"/>
+  <text x="338" y="216" class="s">2  keep youtube.com / google.com rows only</text>
+  <rect class="step" x="322" y="238" width="316" height="38" rx="8"/>
+  <text x="338" y="262" class="s">3  decrypt with Chrome Safe Storage key</text>
+  <rect class="step" x="322" y="284" width="316" height="38" rx="8"/>
+  <text x="338" y="308" class="s">4  Netscape cookies.txt, sorted</text>
+  <text x="322" y="348" class="s dim">logs: counts only. errors: short code only.</text>
+
+  <!-- sources -->
+  <path d="M660 166 H720" stroke="#94a3b8" stroke-width="1.6" fill="none" marker-end="url(#arrow)"/>
+  <path d="M660 258 H720" stroke="#94a3b8" stroke-width="1.6" fill="none" marker-end="url(#arrow)"/>
+
+  <rect class="box" x="720" y="96" width="200" height="96" rx="12"/>
+  <text x="738" y="126" class="t">Chrome profile</text>
+  <text x="738" y="148" class="s mono dim">Default | Profile N</text>
+  <text x="738" y="168" class="s mono dim">Network/Cookies</text>
+
+  <rect class="box" x="720" y="210" width="200" height="96" rx="12"/>
+  <text x="738" y="240" class="t">Login keychain</text>
+  <text x="738" y="262" class="s mono dim">Chrome Safe Storage</text>
+  <text x="738" y="282" class="s dim">Always Allow, once</text>
+
+  <!-- filtered -->
+  <text x="720" y="334" class="s ok">youtube.com  google.com</text>
+  <text x="720" y="354" class="s no">claude.ai  github.com  ...  never leave</text>
+</svg>

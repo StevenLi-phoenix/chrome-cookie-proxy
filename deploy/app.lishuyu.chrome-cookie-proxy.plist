@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>app.lishuyu.chrome-cookie-proxy</string>
+    <!-- launchd 不展开 ~：安装时把 __HOME__ 换成家目录的绝对路径，见 README -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>__HOME__/.local/libexec/chrome-cookie-proxy/chrome-cookie-proxy</string>
+        <string>serve</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardErrorPath</key>
+    <string>__HOME__/.local/state/chrome-cookie-proxy/proxy.log</string>
+</dict>
+</plist>
