@@ -60,8 +60,8 @@ yt-dlp --cookies cookies.txt <url>
 ```bash
 swift test
 swift build -c release
-codesign --force --timestamp --options runtime -i chrome-cookie-proxy \
-  -s "Developer ID Application: <name> (<TEAMID>)" .build/release/chrome-cookie-proxy
+SIGN_ID="Developer ID Application: <name> (<TEAMID>)"   # security find-identity -v -p codesigning
+codesign --force --timestamp --options runtime -i chrome-cookie-proxy -s "$SIGN_ID" .build/release/chrome-cookie-proxy
 codesign -dv --verbose=2 .build/release/chrome-cookie-proxy   # Identifier、TeamIdentifier、flags=0x10000(runtime)
 ```
 
