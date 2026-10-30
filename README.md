@@ -20,6 +20,7 @@
 
 ```
 chrome-cookie-proxy serve [--socket <path>] [--chrome-root <dir>] [--profile <name>]
+chrome-cookie-proxy version
 ```
 
 | 选项 | 默认值 |
@@ -59,7 +60,7 @@ yt-dlp --cookies cookies.txt <url>
 ```bash
 swift test
 swift build -c release
-codesign --force --options runtime -i chrome-cookie-proxy \
+codesign --force --timestamp --options runtime -i chrome-cookie-proxy \
   -s "Developer ID Application: <name> (<TEAMID>)" .build/release/chrome-cookie-proxy
 codesign -dv --verbose=2 .build/release/chrome-cookie-proxy   # Identifier、TeamIdentifier、flags=0x10000(runtime)
 ```
@@ -83,7 +84,7 @@ launchd 不会展开 `~`，所以示例 plist 里用 `__HOME__` 占位，上面�
 1. 打开 系统设置 > 隐私与安全性 > 完全磁盘访问权限，点 “+”，按 Cmd+Shift+G 输入 `~/.local/libexec/chrome-cookie-proxy/chrome-cookie-proxy` 添加并打开开关，然后 `launchctl kickstart -k gui/$(id -u)/app.lishuyu.chrome-cookie-proxy` 重启服务。
 2. 发一次 `curl --max-time 120 --unix-socket ~/.local/state/chrome-cookie-proxy/proxy.sock http://localhost/v1/cookies/youtube -o /dev/null`，macOS 会弹出 “chrome-cookie-proxy 想要使用钥匙串中的 Chrome Safe Storage”，输入登录密码并选 “始终允许”。
 
-之后验证：`curl --unix-socket ~/.local/state/chrome-cookie-proxy/proxy.sock http://localhost/healthz` 应该返回 `ok`，`tail ~/.local/state/chrome-cookie-proxy/proxy.log` 能看到请求行。升级时覆盖二进制，重新用同一个证书和 identifier 签名，再 `launchctl kickstart -k` 即可。
+之后验证：`curl --unix-socket ~/.local/state/chrome-cookie-proxy/proxy.sock http://localhost/healthz` 应该返回 `ok`，`tail ~/.local/state/chrome-cookie-proxy/proxy.log` 能看到请求行。升级时用同一个证书和 identifier 重新签名，先拷成同目录下的临时文件名再 `mv` 过去（不要原地覆盖正在运行的二进制，内核会因签名页失效杀掉进程），然后 `launchctl kickstart -k gui/$(id -u)/app.lishuyu.chrome-cookie-proxy`，用 `chrome-cookie-proxy version` 确认版本。FDA 和钥匙串授权都跟着代码要求走，升级后不用重新授权。
 
 ## 测试
 

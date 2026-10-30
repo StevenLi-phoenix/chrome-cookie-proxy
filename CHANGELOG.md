@@ -3,6 +3,12 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.2] - 2026-10-29
+
+### Added
+
+- `chrome-cookie-proxy version` prints the version, so the deployed build can be checked over ssh.
+
 ## [0.1.1] - 2026-10-29
 
 ### Fixed

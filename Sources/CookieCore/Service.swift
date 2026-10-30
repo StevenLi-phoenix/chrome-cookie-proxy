@@ -3,7 +3,7 @@ import Dispatch
 import Foundation
 
 public enum Service {
-    public static let version = "0.1.1"
+    public static let version = "0.1.2"
 
     /// `serve` 子命令：启动、处理 SIGTERM/SIGINT、阻塞到退出。
     public static func serve(_ options: ServeOptions, logger: RequestLogger = .stderr) throws {

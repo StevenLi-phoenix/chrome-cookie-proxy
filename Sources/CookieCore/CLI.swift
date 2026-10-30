@@ -14,6 +14,7 @@ public struct ServeOptions: Equatable, Sendable {
 
 public enum Command: Equatable, Sendable {
     case serve(ServeOptions)
+    case version
     case help
 }
 
@@ -24,6 +25,7 @@ public struct CLIError: Error, Equatable, CustomStringConvertible {
 public enum CLI {
     public static let usage = """
         usage: chrome-cookie-proxy serve [--socket <path>] [--chrome-root <dir>] [--profile <name>]
+               chrome-cookie-proxy version
 
           --socket       unix socket path (default ~/.local/state/chrome-cookie-proxy/proxy.sock)
           --chrome-root  Chrome user data dir (default ~/Library/Application Support/Google/Chrome)
@@ -35,6 +37,9 @@ public enum CLI {
         switch first {
         case "help", "--help", "-h":
             return .help
+        case "version", "--version":
+            guard args.count == 1 else { throw CLIError(description: "unknown argument: \(args[1])") }
+            return .version
         case "serve":
             var options = ServeOptions(
                 socketPath: home + "/.local/state/chrome-cookie-proxy/proxy.sock",

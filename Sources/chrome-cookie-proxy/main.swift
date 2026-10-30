@@ -10,6 +10,8 @@ do {
     switch try CLI.parse(Array(CommandLine.arguments.dropFirst()), home: NSHomeDirectory()) {
     case .help:
         print(CLI.usage)
+    case .version:
+        print(Service.version)
     case .serve(let options):
         try Service.serve(options)
     }

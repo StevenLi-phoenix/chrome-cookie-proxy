@@ -16,6 +16,12 @@ final class CLITests: XCTestCase {
         XCTAssertEqual(cmd, .serve(ServeOptions(socketPath: "/tmp/a/b.sock", chromeRoot: "/c", profile: "Profile 1")))
     }
 
+    func testVersion() throws {
+        XCTAssertEqual(try CLI.parse(["version"], home: home), .version)
+        XCTAssertEqual(try CLI.parse(["--version"], home: home), .version)
+        XCTAssertThrowsError(try CLI.parse(["version", "extra"], home: home))
+    }
+
     func testHelpAndErrors() {
         XCTAssertEqual(try CLI.parse(["--help"], home: home), .help)
         XCTAssertEqual(try CLI.parse(["help"], home: home), .help)
