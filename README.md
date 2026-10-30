@@ -38,7 +38,7 @@ chrome-cookie-proxy serve [--socket <path>] [--chrome-root <dir>] [--profile <na
 | 非 GET 方法 | `405`（带 `Allow: GET`） |
 | 请求格式不对、超过 8 KB | `400`（`bad_request`、`request_too_large`） |
 | 5 秒内没发完请求行和头部 | `408` |
-| 内部错误 | `500`，响应体是 `keychain_denied`、`cookies_db_unreadable`、`no_profile`、`internal_error` 之一 |
+| 内部错误 | `500`，响应体是 `chrome_root_unreadable`（没有 Full Disk Access）、`keychain_denied`、`cookies_db_unreadable`、`no_profile`、`internal_error` 之一 |
 
 客户端：
 

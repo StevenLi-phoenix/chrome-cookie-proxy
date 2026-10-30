@@ -127,6 +127,7 @@ final class RouterTests: XCTestCase {
             (.keychainDenied("OSStatus -25293"), "keychain_denied"),
             (.cookiesDBUnreadable("sqlite 14 at /secret/path"), "cookies_db_unreadable"),
             (.noProfile, "no_profile"),
+            (.chromeRootUnreadable("opendir errno 1"), "chrome_root_unreadable"),
             (.internalError("boom"), "internal_error"),
         ]
         for (err, code) in cases {

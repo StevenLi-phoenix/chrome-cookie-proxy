@@ -3,6 +3,14 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.1] - 2026-10-29
+
+### Fixed
+
+- A Chrome root that exists but cannot be opened (Full Disk Access missing or revoked, `EPERM`/`EACCES`) now
+  answers `chrome_root_unreadable` instead of `no_profile`, so a revoked grant is not mistaken for a missing
+  Chrome profile.
+
 ## [0.1.0] - 2026-10-29
 
 ### Added

@@ -4,6 +4,8 @@ import Foundation
 /// `detail` 只进日志（OSStatus、SQLite 返回码这类诊断信息）。
 public enum ExportError: Error, Equatable {
     case noProfile
+    /// Chrome 根目录存在但打不开：几乎总是 Full Disk Access 没给或被收回（TCC 返回 EPERM）。
+    case chromeRootUnreadable(String)
     case cookiesDBUnreadable(String)
     case keychainDenied(String)
     case internalError(String)
@@ -11,6 +13,7 @@ public enum ExportError: Error, Equatable {
     public var code: String {
         switch self {
         case .noProfile: "no_profile"
+        case .chromeRootUnreadable: "chrome_root_unreadable"
         case .cookiesDBUnreadable: "cookies_db_unreadable"
         case .keychainDenied: "keychain_denied"
         case .internalError: "internal_error"
@@ -20,7 +23,7 @@ public enum ExportError: Error, Equatable {
     public var detail: String {
         switch self {
         case .noProfile: ""
-        case .cookiesDBUnreadable(let d), .keychainDenied(let d), .internalError(let d): d
+        case .chromeRootUnreadable(let d), .cookiesDBUnreadable(let d), .keychainDenied(let d), .internalError(let d): d
         }
     }
 }

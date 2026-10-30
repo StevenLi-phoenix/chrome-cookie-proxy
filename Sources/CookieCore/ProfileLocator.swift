@@ -12,6 +12,7 @@ enum ProfileLocator {
 
     static func select(chromeRoot: URL, profile: String?) throws -> SelectedProfile {
         let fm = FileManager.default
+        try checkReadable(chromeRoot)
         let names: [String]
         if let profile {
             guard !profile.isEmpty, !profile.contains("/"), profile != ".", profile != ".." else { throw ExportError.noProfile }
@@ -36,5 +37,15 @@ enum ProfileLocator {
         }
         guard let best else { throw ExportError.noProfile }
         return best.profile
+    }
+
+    /// 先单独打开一次根目录：EPERM/EACCES 报成权限问题，其余（目录不存在等）照旧算 no_profile。
+    private static func checkReadable(_ chromeRoot: URL) throws {
+        guard let dir = opendir(chromeRoot.path) else {
+            let code = errno
+            if code == EPERM || code == EACCES { throw ExportError.chromeRootUnreadable("opendir errno \(code)") }
+            return
+        }
+        closedir(dir)
     }
 }

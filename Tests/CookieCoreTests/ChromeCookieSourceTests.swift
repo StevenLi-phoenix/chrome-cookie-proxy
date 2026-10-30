@@ -117,6 +117,22 @@ final class ChromeCookieSourceTests: XCTestCase {
         }
     }
 
+    /// 没有 Full Disk Access 时 TCC 让 opendir 返回 EPERM；这里用 chmod 000 得到同类的 EACCES。
+    /// 必须和 no_profile 区分开，否则“权限被收回”会被误读成“Chrome 没装 / 没登录”。
+    func testUnreadableChromeRootIsNotNoProfile() throws {
+        let base = try makeTempDir()
+        let root = base.appendingPathComponent("chrome")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
+        try FixtureChrome(root: root).addProfile("Default", metaVersion: 23, rows: Vectors.defaultRows, modified: old)
+        XCTAssertEqual(chmod(root.path, 0o000), 0)
+        defer { chmod(root.path, 0o700) }
+        for profile in [nil, "Default"] as [String?] {
+            XCTAssertThrowsError(try source(root, work: base, profile: profile).export(suffixes: youtube)) { error in
+                XCTAssertEqual((error as? ExportError)?.code, "chrome_root_unreadable")
+            }
+        }
+    }
+
     func testCorruptDatabase() throws {
         let base = try makeTempDir()
         let root = base.appendingPathComponent("chrome/Default")
