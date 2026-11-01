@@ -95,7 +95,7 @@ launchd 不会展开 `~`，所以示例 plist 里用 `__HOME__` 占位，上面�
 1. 打开 系统设置 > 隐私与安全性 > 完全磁盘访问权限，点 “+”，按 Cmd+Shift+G 输入 `~/.local/libexec/chrome-cookie-proxy/chrome-cookie-proxy` 添加并打开开关，然后 `launchctl kickstart -k gui/$(id -u)/app.lishuyu.chrome-cookie-proxy` 重启服务。
 2. 发一次 `curl --max-time 120 --unix-socket ~/.local/state/chrome-cookie-proxy/proxy.sock http://localhost/v1/cookies/youtube -o /dev/null`，macOS 会弹出 “chrome-cookie-proxy 想要使用钥匙串中的 Chrome Safe Storage”，输入登录密码并选 “始终允许”。
 
-之后验证：`curl --unix-socket ~/.local/state/chrome-cookie-proxy/proxy.sock http://localhost/healthz` 应该返回 `ok`，`tail ~/.local/state/chrome-cookie-proxy/proxy.log` 能看到请求行。升级时用同一个证书和 identifier 重新签名，先拷成同目录下的临时文件名再 `mv` 过去（不要原地覆盖正在运行的二进制，内核会因签名页失效杀掉进程），然后 `launchctl kickstart -k gui/$(id -u)/app.lishuyu.chrome-cookie-proxy`，用 `chrome-cookie-proxy version` 确认版本。FDA 和钥匙串授权都跟着代码要求走，升级后不用重新授权。
+之后验证：`curl --unix-socket ~/.local/state/chrome-cookie-proxy/proxy.sock http://localhost/healthz` 应该返回 `ok`，`tail ~/.local/state/chrome-cookie-proxy/proxy.log` 能看到请求行。升级时用同一个证书和 identifier 重新签名，先拷成同目录下的临时文件名再 `mv` 过去（不要原地覆盖正在运行的二进制，内核会因签名页失效杀掉进程），然后 `launchctl kickstart -k gui/$(id -u)/app.lishuyu.chrome-cookie-proxy`，用 `chrome-cookie-proxy version` 确认版本。FDA 和钥匙串授权都跟着代码要求走，升级后不用重新授权。注意这只对**同一个路径**成立：2026-11-01 在另一个路径上试跑 0.2.0，钥匙串授权照样通过（Chrome Safe Storage 解密成功），但完全磁盘访问权限是按路径记的，新路径上请求 Chrome 目录会得到 `chrome_root_unreadable`（`opendir errno 1`）。所以升级一律覆盖同一路径（`mv` 到 `~/.local/libexec/chrome-cookie-proxy/chrome-cookie-proxy`），不要换路径。
 
 ## 测试
 
