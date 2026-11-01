@@ -6,14 +6,15 @@ public struct ServerError: Error, CustomStringConvertible {
 }
 
 /// 监听一个 unix socket，串行处理连接（一次一个）。
-/// 每个连接先核对对方 uid，再读最多 8 KB（5 秒超时）的请求，交给 Router，写回响应后关闭。
+/// 每个连接先核对对方 uid 是否在白名单里，再读最多 8 KB（5 秒超时）的请求，交给 Router，写回响应后关闭。
 public final class UnixSocketServer: @unchecked Sendable {
     private static let maxPathBytes = 103  // sockaddr_un.sun_path 是 104 字节，要留一个 NUL
 
     private let socketPath: String
     private let router: Router
     private let logger: RequestLogger
-    private let allowedUID: uid_t
+    private let allowedUIDs: Set<uid_t>
+    private let socketMode: mode_t
     private let readTimeout: TimeInterval
 
     private let lock = NSLock()
@@ -22,18 +23,23 @@ public final class UnixSocketServer: @unchecked Sendable {
     private var wakeWrite: Int32 = -1
 
     public init(socketPath: String, router: Router, logger: RequestLogger,
-                allowedUID: uid_t = getuid(), readTimeout: TimeInterval = 5) {
+                allowedUIDs: Set<uid_t> = [getuid()], socketMode: mode_t = 0o600,
+                readTimeout: TimeInterval = 5) {
         self.socketPath = URL(fileURLWithPath: socketPath).path
         self.router = router
         self.logger = logger
-        self.allowedUID = allowedUID
+        self.allowedUIDs = allowedUIDs
+        self.socketMode = socketMode
         self.readTimeout = readTimeout
     }
 
     // MARK: - 启动
 
-    /// 准备目录（0700、属于当前用户）、清掉残留 socket、bind、chmod 0600、listen。
+    /// 准备目录（0700、属于当前用户）、清掉残留 socket、bind、chmod（默认 0600）、listen。
     public func start() throws {
+        guard socketMode & 0o600 == 0o600, socketMode <= 0o777 else {
+            throw ServerError(description: "socket mode \(String(socketMode, radix: 8)) must keep owner read/write and stay within 0777")
+        }
         guard socketPath.utf8.count <= Self.maxPathBytes else {
             throw ServerError(description: "socket path is longer than \(Self.maxPathBytes) bytes: \(socketPath)")
         }
@@ -67,7 +73,7 @@ public final class UnixSocketServer: @unchecked Sendable {
         }
         umask(oldMask)
         guard bound == 0 else { throw fail("bind \(socketPath)") }
-        guard chmod(socketPath, 0o600) == 0 else { throw fail("chmod socket") }
+        guard chmod(socketPath, socketMode) == 0 else { throw fail("chmod socket") }
         guard listen(fd, 16) == 0 else { throw fail("listen") }
 
         lock.lock()
@@ -164,8 +170,12 @@ public final class UnixSocketServer: @unchecked Sendable {
 
         var uid: uid_t = 0
         var gid: gid_t = 0
-        guard getpeereid(fd, &uid, &gid) == 0, uid == allowedUID else {
-            logger.info("rejected connection: peer uid \(uid) != \(allowedUID)")
+        guard getpeereid(fd, &uid, &gid) == 0, allowedUIDs.contains(uid) else {
+            if allowedUIDs.count == 1, let only = allowedUIDs.first {
+                logger.info("rejected connection: peer uid \(uid) != \(only)")
+            } else {
+                logger.info("rejected connection: peer uid \(uid) not in allowed uids \(allowedUIDs.sorted())")
+            }
             return
         }
 

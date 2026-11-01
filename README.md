@@ -10,7 +10,7 @@
 
 ## 安全模型
 
-服务只监听 unix socket，不监听任何 TCP 端口。socket 受文件系统权限保护，并且每个连接都能用 `getpeereid` 拿到对方进程的真实 uid；回环 TCP 做不到这两点，本机的任何用户、任何进程，甚至浏览器里的网页（通过 DNS rebinding 或跨站请求）都能碰到它。启动时服务会创建 socket 所在目录并设为 `0700`，目录不属于当前用户就拒绝启动，socket 文件本身是 `0600`，每个连接的对端 uid 必须等于服务自己的 uid，否则直接关闭并记一行日志。
+服务只监听 unix socket，不监听任何 TCP 端口。socket 受文件系统权限保护，并且每个连接都能用 `getpeereid` 拿到对方进程的真实 uid；回环 TCP 做不到这两点，本机的任何用户、任何进程，甚至浏览器里的网页（通过 DNS rebinding 或跨站请求）都能碰到它。启动时服务会创建 socket 所在目录并设为 `0700`，目录不属于当前用户就拒绝启动，socket 文件本身是 `0600`，每个连接的对端 uid 必须在白名单里（默认只有服务自己的 uid），否则直接关闭并记一行日志。
 
 这个模型保护的边界要说清楚：同一个用户下的进程依然可以连上 socket，所以它防的是“别的用户和网页”，防不了“同一用户下的恶意进程”。但这类进程拿到的只是白名单里的 cookie，既拿不到钥匙串密码，也拿不到别的站点，这比把 FDA 交给通用解释器要小得多。白名单是编译期写死的表（`youtube` 对应 `youtube.com` 和 `google.com`），host_key 去掉开头的 `.` 之后，等于后缀或以 `.` + 后缀结尾才算命中，所以 `accounts.google.com` 命中，`notyoutube.com`、`google.com.evil.io` 不命中；要增加域名只能改代码重新签名发布。
 
@@ -20,6 +20,7 @@
 
 ```
 chrome-cookie-proxy serve [--socket <path>] [--chrome-root <dir>] [--profile <name>]
+                          [--allow-uid <uid>]... [--socket-mode <octal>]
 chrome-cookie-proxy version
 ```
 
@@ -28,6 +29,16 @@ chrome-cookie-proxy version
 | `--socket` | `~/.local/state/chrome-cookie-proxy/proxy.sock` |
 | `--chrome-root` | `~/Library/Application Support/Google/Chrome` |
 | `--profile` | 自动选择：`Default` 和 `Profile *` 里 Cookies 文件修改时间最新的（和 yt-dlp 一致） |
+| `--allow-uid` | 不传：只允许服务自己的 uid。可重复；每个值都是额外放行的 uid，服务自己的 uid 永远在白名单里 |
+| `--socket-mode` | `0600`。八进制，最多 `0777`，属主必须保留读写（`0600` 位）；`0666` 让其他 uid 有权限 `connect()` |
+
+两个新选项合起来用，才能让另一个用户（例如以 `dsh-runtime` 身份跑的 AMS 服务）取 cookie，两层缺一不可：`--allow-uid` 决定**谁**的请求会被处理（`getpeereid` 拿到的真实 uid，伪造不了），`--socket-mode` 只是放开 socket 文件的权限位，让别的 uid 的 `connect()` 能走到服务那一步。socket 所在目录仍是 `0700`，别的用户要进得去，得在目录上显式加 ACL（`chmod +a "dsh-runtime allow search,readattr" <dir>`；`chmod` 重新收紧到 `0700` 不会清掉 ACL）。目录 ACL 和 uid 白名单是两道独立的门：没有 ACL，别的用户连 socket 路径都解析不到；不在白名单里，连上了也会被立刻关闭，并写一行 `rejected connection: peer uid <uid> not in allowed uids [...]`（只放行一个 uid 时保持原样的 `peer uid <uid> != <允许的 uid>`）。例如 AMS 下的部署：
+
+```bash
+mkdir -m 700 /Users/Shared/chrome-cookie-proxy
+chmod +a "dsh-runtime allow search,readattr" /Users/Shared/chrome-cookie-proxy
+chrome-cookie-proxy serve --socket /Users/Shared/chrome-cookie-proxy/proxy.sock --allow-uid 502 --socket-mode 0666
+```
 
 `--socket` 的目录必须属于当前用户（服务会把它收紧到 `0700`），所以不能把 socket 直接放在 `/tmp` 下，放在 `/tmp/foo/` 之类自己的子目录里即可。unix socket 的路径最长 103 字节。
 

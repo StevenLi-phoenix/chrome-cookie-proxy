@@ -96,9 +96,10 @@ final class ServerTests: XCTestCase {
     }
 
     func start(_ path: String, source: CookieSource = CannedSource(), logs: LogCollector = LogCollector(),
-               allowedUID: uid_t = getuid(), readTimeout: TimeInterval = 5) throws -> RunningServer {
+               allowedUIDs: Set<uid_t> = [getuid()], socketMode: mode_t = 0o600,
+               readTimeout: TimeInterval = 5) throws -> RunningServer {
         let server = UnixSocketServer(socketPath: path, router: Router(source: source), logger: logs.logger,
-                                      allowedUID: allowedUID, readTimeout: readTimeout)
+                                      allowedUIDs: allowedUIDs, socketMode: socketMode, readTimeout: readTimeout)
         let running = try RunningServer(server)
         addTeardownBlock { running.stopAndWait() }
         return running
@@ -175,10 +176,64 @@ final class ServerTests: XCTestCase {
     func testForeignUIDIsClosedWithoutResponse() throws {
         let path = try socketPath()
         let logs = LogCollector()
-        _ = try start(path, logs: logs, allowedUID: getuid() &+ 1)
+        _ = try start(path, logs: logs, allowedUIDs: [getuid() &+ 1])
         let r = get(path, "/v1/cookies/youtube")
         XCTAssertEqual(r, "")
         XCTAssertTrue(logs.lines.contains { $0.contains("peer uid") && $0.contains("rejected") }, "\(logs.lines)")
+    }
+
+    func testSingleUIDRejectionKeepsTheOriginalLogLine() throws {
+        let path = try socketPath()
+        let logs = LogCollector()
+        let other = getuid() &+ 1
+        _ = try start(path, logs: logs, allowedUIDs: [other])
+        _ = get(path, "/healthz")
+        XCTAssertTrue(logs.lines.contains { $0.hasSuffix("rejected connection: peer uid \(getuid()) != \(other)") }, "\(logs.lines)")
+    }
+
+    func testPeerInAllowedSetIsServed() throws {
+        let path = try socketPath()
+        let logs = LogCollector()
+        // 白名单里有别的 uid，也有自己：自己照常通过
+        _ = try start(path, logs: logs, allowedUIDs: [getuid(), getuid() &+ 7, getuid() &+ 9])
+        XCTAssertEqual(statusLine(get(path, "/healthz")), "HTTP/1.1 200 OK")
+        XCTAssertFalse(logs.lines.contains { $0.contains("rejected") }, "\(logs.lines)")
+    }
+
+    func testPeerOutsideAllowedSetIsRejectedAndLogged() throws {
+        let path = try socketPath()
+        let logs = LogCollector()
+        _ = try start(path, logs: logs, allowedUIDs: [getuid() &+ 7, getuid() &+ 9])
+        XCTAssertEqual(get(path, "/healthz"), "")
+        let line = try XCTUnwrap(logs.lines.first { $0.contains("rejected connection") }, "\(logs.lines)")
+        XCTAssertTrue(line.contains("peer uid \(getuid())"), line)
+        XCTAssertTrue(line.contains("\(getuid() &+ 7)") && line.contains("\(getuid() &+ 9)"), line)  // 写出白名单，便于排错
+        // 服务没被一个被拒绝的连接拖垮
+        XCTAssertEqual(get(path, "/healthz"), "")
+    }
+
+    func testSocketModeIsApplied() throws {
+        let path = try socketPath()
+        _ = try start(path, socketMode: 0o666)
+        XCTAssertEqual(mode(path), 0o666)
+        XCTAssertEqual(mode((path as NSString).deletingLastPathComponent), 0o700)  // 目录仍是 0700，由它加 ACL 把关
+        XCTAssertEqual(statusLine(get(path, "/healthz")), "HTTP/1.1 200 OK")
+    }
+
+    func testDefaultSocketModeStays0600() throws {
+        let path = try socketPath()
+        let server = UnixSocketServer(socketPath: path, router: Router(source: CannedSource()), logger: LogCollector().logger)
+        try server.start()
+        defer { unlink(path) }
+        XCTAssertEqual(mode(path), 0o600)
+    }
+
+    func testRefusesSocketModeWithoutOwnerReadWrite() throws {
+        let path = try socketPath()
+        let server = UnixSocketServer(socketPath: path, router: Router(source: CannedSource()), logger: LogCollector().logger,
+                                      socketMode: 0o444)
+        XCTAssertThrowsError(try server.start())
+        XCTAssertFalse(FileManager.default.fileExists(atPath: path))
     }
 
     func testStopRemovesSocketFile() throws {

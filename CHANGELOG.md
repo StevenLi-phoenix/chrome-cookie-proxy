@@ -3,6 +3,22 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.0] - 2026-11-01
+
+### Added
+
+- `serve --allow-uid <uid>` (repeatable) lets more than the service's own uid connect: the allowed peer uid is now a set (the
+  service's own uid is always in it). A rejected connection is logged with the offending uid and, when the set has more than one
+  member, the allowed uids.
+- `serve --socket-mode <octal>` sets the socket file's mode (default `0600`; up to `0777`, owner must keep read/write) so another
+  user can `connect()` when the socket directory's ACL admits them.
+- The startup log line lists `allowed_uids` and `socket_mode`.
+
+### Unchanged
+
+- Without the new options behavior is identical to 0.1.2: only the service's own uid is accepted, the socket is `0600`, a single-uid
+  rejection logs the same line as before.
+
 ## [0.1.2] - 2026-10-29
 
 ### Added
